@@ -2,8 +2,8 @@ services:
   scylladb:
     image: 'scylladb/scylla'
     ports:
-    - '8000:8000'
     - '9042:9042'
+    - '8000:8000'
     command: '--smp 1 --alternator-port 8000 --alternator-write-isolation only_rmw_uses_lwt'
     labels:
       org.springframework.boot.service-connection: cassandra
