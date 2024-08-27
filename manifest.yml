@@ -1,0 +1,32 @@
+applications:
+- name: demo-dynamodb
+  buildpacks:
+  - java_buildpack_offline
+  memory: 768m
+  path: ./target/demo-scylla-alternator-0.0.1-SNAPSHOT.jar
+  env:
+    JBP_CONFIG_OPEN_JDK_JRE: '{jre: {version: 17.+}}'
+    SPRING_CLOUD_AWS_CREDENTIALS_STS_WEBIDENTITYTOKENFILE: /tmp/token
+    SPRING_CLOUD_AWS_CREDENTIALS_STS_ROLEARN: arn:aws:iam::798085859000:role/cf-${vcap.application.organization_name}-${vcap.application.space_name}
+    SPRING_CLOUD_AWS_CREDENTIALS_STS_ROLESESSIONNAME: ${vcap.application.application_name}
+    SPRING_CLOUD_AWS_CREDENTIALS_STS_ASYNCCREDENTIALSUPDATE: true
+    SPRING_CLOUD_AWS_DYNAMODB_TABLEPREFIX: ${vcap.application.organization_name}-${vcap.application.space_name}-
+    SPRING_CLOUD_AWS_DYNAMODB_ENDPOINT: ""
+    AWS_REGION: ap-northeast-1
+  sidecars:
+  - name: issue-token
+    command: |
+      APP_DOMAIN=$(echo $VCAP_APPLICATION | jq -r '.application_uris[0] | split(".")[1:] | join(".")')
+      while true;do
+        set +e
+        curl -s -XPOST https://cits.${APP_DOMAIN}/token \
+          --key $CF_INSTANCE_KEY \
+          --cert $CF_INSTANCE_CERT \
+          -o ${SPRING_CLOUD_AWS_CREDENTIALS_STS_WEBIDENTITYTOKENFILE} \
+          -w 'status:%{http_code}\n'
+        set -e
+        sleep 7200
+      done
+    memory: 16m
+    process_types:
+    - web
